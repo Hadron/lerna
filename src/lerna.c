@@ -115,6 +115,16 @@ void _hemisphere_tracking(int which_cont) {
   }
 }
 
+const float _q[4] = {0.f, 1.f, 0.f, 0.f}; //180 around X unit quaternion
+float _qtmp[4] = {0.f};
+void _quat_180Xrot(float v[4]) {
+  _qtmp[0] = v[0] * _q[0] - v[1] * _q[1] - v[2] * _q[2] - v[3] * _q[3];
+  _qtmp[1] = v[0] * _q[1] + v[1] * _q[0] + v[2] * _q[3] - v[3] * _q[2];
+  _qtmp[2] = v[0] * _q[2] + v[2] * _q[0] + v[3] * _q[1] - v[1] * _q[3];
+  _qtmp[3] = v[0] * _q[3] + v[3] * _q[0] + v[1] * _q[2] - v[2] * _q[1];
+  memcpy(v, &_qtmp, sizeof(float)*4);
+}
+
 void _processData(ubyte buf[]) {
   lernaDualControllerData *_new = &_lcd._history[buf[7]];
   _lcd._prev = _lcd._last;
@@ -129,7 +139,7 @@ void _processData(ubyte buf[]) {
     _new->data[i].quat[0] = int16buf[3] * INT16_FLOAT_M11;
     _new->data[i].quat[1] = int16buf[4] * INT16_FLOAT_M11;
     _new->data[i].quat[3] = int16buf[5] * INT16_FLOAT_M11;                      //Same change for the rotation
-    _new->data[i].quat[2] = -int16buf[6] * INT16_FLOAT_M11;                     //to a right-hand system
+    _new->data[i].quat[2] = -int16buf[6] * INT16_FLOAT_M11;                     //but also a 180 rotation around X
     memcpy(&_new->data[i].buttons, &buf[CD_offset[i]+14], sizeof(ubyte));
     int16buf = (int16*) &buf[CD_offset[i]+15];
     _new->data[i].joy_x = int16buf[0] * INT16_FLOAT_M11;
@@ -145,6 +155,7 @@ void _processData(ubyte buf[]) {
     _new->data[i].quat[1] *= invlength;
     _new->data[i].quat[2] *= invlength;
     _new->data[i].quat[3] *= invlength;
+    _quat_180Xrot(_new->data[i].quat);
 
     if(_lid._status & LERNA_SPHTRAC) _hemisphere_tracking(i);
     //TODO filter pos and quat
@@ -199,8 +210,6 @@ int _hydraProcess(void *arg){
     ret = hid_read(_lid._hydra_dat, rbuf, sizeof(rbuf));
     if(ret>0) {
       _processData(rbuf);
-      //printf("%f\t%f\t%f\n", _lcd._history[_lcd._last].data[1].pos[0],_lcd._history[_lcd._last].data[1].pos[1],_lcd._history[_lcd._last].data[1].pos[2]);
-      //printf("%f\t%f\t%f\t%f\n", _lcd._history[_lcd._last].data[1].quat[0],_lcd._history[_lcd._last].data[1].quat[1],_lcd._history[_lcd._last].data[1].quat[2],_lcd._history[_lcd._last].data[1].quat[3]);
     }
     else if(ret<0) fprintf(stderr, "Err\n");
   }
@@ -262,6 +271,7 @@ int lernaExit(void) {
 }
 
 //We require 1 second (at 250Hz) to get a full historical controller data buffer (although 1/4 would be enough for a history of 64)
+//I known time() has resolution up to seconds, but if we require 1 sec, this function may be portable enough...
 int lernaIsActive(void) {
   time_t t2; time(&t2);
   double elapsedTime = difftime(t2, _lid._time);

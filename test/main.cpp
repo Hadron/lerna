@@ -19,6 +19,7 @@ void init3D() {
   glClearDepth(1.f);
   glDepthFunc(GL_LEQUAL);
   glEnable(GL_DEPTH_TEST);
+//glEnable(GL_CULL_FACE);
 }
 
 lernaDualControllerData ldcd;
@@ -60,6 +61,7 @@ void draw3D() {
 
       glColor3f(1.f, 0.f, 0.f);
       glVertex3f(0.2f, 0.f, 0.f);
+      glColor3f(0.f, 0.f, 1.f);
       glVertex3f(-0.2f, 0.f, 0.f);
       glColor3f(0.f, 1.f, 0.f);
       glVertex3f(0.f, -0.5f, 0.f);

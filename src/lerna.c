@@ -30,6 +30,7 @@
 #include <hidapi/hidapi.h>
 #include <tinycthread/tinycthread.h>
 #include <stdio.h>
+#include <math.h>
 #include <string.h>
 
 #define INT16_FLOAT_MM  1e-3f
@@ -122,20 +123,29 @@ void _processData(ubyte buf[]) {
   int i;
   for(i=0; i<2; i++) {
     int16buf = (int16*) &buf[CD_offset[i]];
-    _new->data[i].pos[0] = int16buf[0] * INT16_FLOAT_MM * _lcd._hemi_mirror[i];         // Y and Z are interchanged and 
-    _new->data[i].pos[2] = int16buf[1] * INT16_FLOAT_MM * _lcd._hemi_mirror[i];         // Z multiplied with -1 to provide
-    _new->data[i].pos[1] = int16buf[2] * INT16_FLOAT_MM * _lcd._hemi_mirror[i] * -1.f;  // a right-hand system (GL)
+    _new->data[i].pos[0] = int16buf[0] * INT16_FLOAT_MM * _lcd._hemi_mirror[i]; // Y and Z are interchanged and 
+    _new->data[i].pos[2] = int16buf[1] * INT16_FLOAT_MM * _lcd._hemi_mirror[i]; // Z multiplied with -1 to provide
+    _new->data[i].pos[1] = -int16buf[2] * INT16_FLOAT_MM * _lcd._hemi_mirror[i];// a right-hand system (GL)
     _new->data[i].quat[0] = int16buf[3] * INT16_FLOAT_M11;
     _new->data[i].quat[1] = int16buf[4] * INT16_FLOAT_M11;
-    _new->data[i].quat[2] = int16buf[5] * INT16_FLOAT_M11;
-    _new->data[i].quat[3] = int16buf[6] * INT16_FLOAT_M11;
+    _new->data[i].quat[3] = int16buf[5] * INT16_FLOAT_M11;                      //Same change for the rotation
+    _new->data[i].quat[2] = -int16buf[6] * INT16_FLOAT_M11;                     //to a right-hand system
     memcpy(&_new->data[i].buttons, &buf[CD_offset[i]+14], sizeof(ubyte));
     int16buf = (int16*) &buf[CD_offset[i]+15];
     _new->data[i].joy_x = int16buf[0] * INT16_FLOAT_M11;
     _new->data[i].joy_y = int16buf[1] * INT16_FLOAT_M11;
     _new->data[i].trigger = ((float) buf[CD_offset[i]+19]) * UINT8_FLOAT_01;
     _new->data[i].which = i;
-    //TODO Normalize quaternion
+    //Normalize quaternion
+    float invlength = 1.f / sqrt(_new->data[i].quat[0] * _new->data[i].quat[0] + 
+        _new->data[i].quat[1] * _new->data[i].quat[1] + 
+        _new->data[i].quat[2] * _new->data[i].quat[2] +
+        _new->data[i].quat[3] * _new->data[i].quat[3]);
+    _new->data[i].quat[0] *= invlength;
+    _new->data[i].quat[1] *= invlength;
+    _new->data[i].quat[2] *= invlength;
+    _new->data[i].quat[3] *= invlength;
+
     if(_lid._status & LERNA_SPHTRAC) _hemisphere_tracking(i);
     //TODO filter pos and quat
   }
@@ -189,7 +199,8 @@ int _hydraProcess(void *arg){
     ret = hid_read(_lid._hydra_dat, rbuf, sizeof(rbuf));
     if(ret>0) {
       _processData(rbuf);
-      //printf("%f\t%f\t%f\n", _lcd._history[_lcd._last].data[0].pos[0],_lcd._history[_lcd._last].data[0].pos[1],_lcd._history[_lcd._last].data[0].pos[2]);
+      //printf("%f\t%f\t%f\n", _lcd._history[_lcd._last].data[1].pos[0],_lcd._history[_lcd._last].data[1].pos[1],_lcd._history[_lcd._last].data[1].pos[2]);
+      //printf("%f\t%f\t%f\t%f\n", _lcd._history[_lcd._last].data[1].quat[0],_lcd._history[_lcd._last].data[1].quat[1],_lcd._history[_lcd._last].data[1].quat[2],_lcd._history[_lcd._last].data[1].quat[3]);
     }
     else if(ret<0) fprintf(stderr, "Err\n");
   }

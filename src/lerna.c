@@ -115,13 +115,12 @@ void _hemisphere_tracking(int which_cont) {
   }
 }
 
-const float _q[4] = {0.f, 1.f, 0.f, 0.f}; //180 around X unit quaternion
 float _qtmp[4] = {0.f};
 void _quat_180Xrot(float v[4]) {
-  _qtmp[0] = v[0] * _q[0] - v[1] * _q[1] - v[2] * _q[2] - v[3] * _q[3];
-  _qtmp[1] = v[0] * _q[1] + v[1] * _q[0] + v[2] * _q[3] - v[3] * _q[2];
-  _qtmp[2] = v[0] * _q[2] + v[2] * _q[0] + v[3] * _q[1] - v[1] * _q[3];
-  _qtmp[3] = v[0] * _q[3] + v[3] * _q[0] + v[1] * _q[2] - v[2] * _q[1];
+  _qtmp[0] = -v[1];
+  _qtmp[1] = v[0];
+  _qtmp[2] = v[3];
+  _qtmp[3] = -v[2];
   memcpy(v, &_qtmp, sizeof(float)*4);
 }
 
@@ -137,9 +136,9 @@ void _processData(ubyte buf[]) {
     _new->data[i].pos[2] = int16buf[1] * INT16_FLOAT_MM * _lcd._hemi_mirror[i]; // Z multiplied with -1 to provide
     _new->data[i].pos[1] = -int16buf[2] * INT16_FLOAT_MM * _lcd._hemi_mirror[i];// a right-hand system (GL)
     _new->data[i].quat[0] = int16buf[3] * INT16_FLOAT_M11;
-    _new->data[i].quat[1] = int16buf[4] * INT16_FLOAT_M11;
-    _new->data[i].quat[3] = int16buf[5] * INT16_FLOAT_M11;                      //Same change for the rotation
-    _new->data[i].quat[2] = -int16buf[6] * INT16_FLOAT_M11;                     //but also a 180 rotation around X
+    _new->data[i].quat[1] = int16buf[4] * INT16_FLOAT_M11;                      //Same change for the rotation
+    _new->data[i].quat[3] = int16buf[5] * INT16_FLOAT_M11;                      //but also a 180 rotation around X
+    _new->data[i].quat[2] = -int16buf[6] * INT16_FLOAT_M11;                     //after the normalization
     memcpy(&_new->data[i].buttons, &buf[CD_offset[i]+14], sizeof(ubyte));
     int16buf = (int16*) &buf[CD_offset[i]+15];
     _new->data[i].joy_x = int16buf[0] * INT16_FLOAT_M11;

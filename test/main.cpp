@@ -29,8 +29,6 @@ float mat[16]={1.f, 0.f, 0.f, 0.f,
 void draw3D() {
   glLoadIdentity();
   glTranslatef(0.f, -1.f, -3.f);
-  //glPushMatrix();
-  //glRotatef(-90.f, 1.f, 0.f, 0.f);
 
   if(LERNA_OK == lernaGetDualControllerData(&ldcd)) {
     for(int i=0; i<2; i++){
@@ -69,7 +67,6 @@ void draw3D() {
       glPopMatrix();
     }
   }
-  //glPopMatrix();
 
   glBegin(GL_LINES);
   glColor3f(1.f, 0.f, 0.f);

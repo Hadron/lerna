@@ -189,7 +189,7 @@ int _hydraProcess(void *arg){
     ret = hid_read(_lid._hydra_dat, rbuf, sizeof(rbuf));
     if(ret>0) {
       _processData(rbuf);
-      printf("%f\t%f\t%f\n", _lcd._history[_lcd._last].data[0].pos[0],_lcd._history[_lcd._last].data[0].pos[1],_lcd._history[_lcd._last].data[0].pos[2]);
+      //printf("%f\t%f\t%f\n", _lcd._history[_lcd._last].data[0].pos[0],_lcd._history[_lcd._last].data[0].pos[1],_lcd._history[_lcd._last].data[0].pos[2]);
     }
     else if(ret<0) fprintf(stderr, "Err\n");
   }

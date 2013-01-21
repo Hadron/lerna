@@ -139,6 +139,7 @@ void _processData(ubyte buf[]) {
     _new->data[i].pos[2] = int16buf[1] * INT16_FLOAT_MM * _lcd._hemi_mirror[i];
     _new->data[i].pos[1] = -int16buf[2] * INT16_FLOAT_MM * _lcd._hemi_mirror[i];
     //Similar change for the rotation to provide the right hand system
+    //no need to normalize the quaternion, Hydra provides it with error up to 1e-4
     _new->data[i].quat[1] = int16buf[3] * INT16_FLOAT_M11;
     _new->data[i].quat[0] = -int16buf[4] * INT16_FLOAT_M11;
     _new->data[i].quat[2] = int16buf[5] * INT16_FLOAT_M11;
@@ -149,11 +150,12 @@ void _processData(ubyte buf[]) {
     _new->data[i].joy_y = int16buf[1] * INT16_FLOAT_M11;
     _new->data[i].trigger = ((float) buf[CD_offset[i]+19]) * UINT8_FLOAT_01;
     _new->data[i].which = i;
-    //Normalize quaternion
-    _quat_normalize(_new->data[i].quat);
 
     if(_lid._status & LERNA_SPHTRAC) _hemisphere_tracking(i);
     //TODO filter pos and quat
+    //Normalize quaternion after filtering
+    //_quat_normalize(_new->data[i].quat);
+
   }
 }
 

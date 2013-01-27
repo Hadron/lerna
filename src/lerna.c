@@ -91,15 +91,11 @@ struct _lerna_internal_controller_data {
 } _lcd;
 
 void _hemisphere_tracking(int which_cont) {
-  float old[3] = {_lcd._history[_lcd._prev].data[which_cont].pos[0],
-    _lcd._history[_lcd._prev].data[which_cont].pos[1],
-    _lcd._history[_lcd._prev].data[which_cont].pos[2]};
-  float report[3] = {_lcd._history[_lcd._last].data[which_cont].pos[0],
-    _lcd._history[_lcd._last].data[which_cont].pos[1],
-    _lcd._history[_lcd._last].data[which_cont].pos[2]};
-  float negat[3] = {-_lcd._history[_lcd._last].data[which_cont].pos[0],
-    -_lcd._history[_lcd._last].data[which_cont].pos[1],
-    -_lcd._history[_lcd._last].data[which_cont].pos[2]};
+#define LAST _lcd._history[_lcd._last].data[which_cont]
+#define PREV _lcd._history[_lcd._prev].data[which_cont]
+  float old[3] = {PREV.pos[0], PREV.pos[1], PREV.pos[2]};
+  float report[3] = {LAST.pos[0], LAST.pos[1], LAST.pos[2]};
+  float negat[3] = {-LAST.pos[0], -LAST.pos[1], -LAST.pos[2]};
 
   float repo = (report[0] - old[0]) * (report[0] - old[0]) +
     (report[1] - old[1]) * (report[1] - old[1]) +
@@ -110,10 +106,12 @@ void _hemisphere_tracking(int which_cont) {
 
   if(repo - nega > LERNA_EPSILON) {
     _lcd._hemi_mirror[which_cont] *= -1.f;
-    _lcd._history[_lcd._last].data[which_cont].pos[0] *= -1.f;
-    _lcd._history[_lcd._last].data[which_cont].pos[1] *= -1.f;
-    _lcd._history[_lcd._last].data[which_cont].pos[2] *= -1.f;
+    LAST.pos[0] *= -1.f;
+    LAST.pos[1] *= -1.f;
+    LAST.pos[2] *= -1.f;
   }
+#undef LAST
+#undef PREV
 }
 
 void _quat_normalize(float v[4]) {
@@ -316,31 +314,28 @@ union _filter_param {
 void _filter_Exp_Smooth(){
   int i;
   for(i=0; i<2; i++){
+#define LAST _lcd._history[_lcd._last].data[i]
+#define PREV _lcd._history[_lcd._prev].data[i]
     //Position
-    _lcd._history[_lcd._last].data[i].pos[0] = 
-      _lcd._history[_lcd._last].data[i].pos[0] * _filter_param._exp_smooth.alpha + 
-      _lcd._history[_lcd._prev].data[i].pos[0] * _filter_param._exp_smooth.omalpha;
-    _lcd._history[_lcd._last].data[i].pos[1] = 
-      _lcd._history[_lcd._last].data[i].pos[1] * _filter_param._exp_smooth.alpha + 
-      _lcd._history[_lcd._prev].data[i].pos[1] * _filter_param._exp_smooth.omalpha;
-    _lcd._history[_lcd._last].data[i].pos[2] = 
-      _lcd._history[_lcd._last].data[i].pos[2] * _filter_param._exp_smooth.alpha + 
-      _lcd._history[_lcd._prev].data[i].pos[2] * _filter_param._exp_smooth.omalpha;
+    LAST.pos[0] = LAST.pos[0] * _filter_param._exp_smooth.alpha + 
+      PREV.pos[0] * _filter_param._exp_smooth.omalpha;
+    LAST.pos[1] = LAST.pos[1] * _filter_param._exp_smooth.alpha + 
+      PREV.pos[1] * _filter_param._exp_smooth.omalpha;
+    LAST.pos[2] = LAST.pos[2] * _filter_param._exp_smooth.alpha + 
+      PREV.pos[2] * _filter_param._exp_smooth.omalpha;
     //Quaternion (just lerp, assuming similar orientations from contiguous frames)
-    _lcd._history[_lcd._last].data[i].quat[0] = 
-      _lcd._history[_lcd._last].data[i].quat[0] * _filter_param._exp_smooth.alpha + 
-      _lcd._history[_lcd._prev].data[i].quat[0] * _filter_param._exp_smooth.omalpha;
-    _lcd._history[_lcd._last].data[i].quat[1] = 
-      _lcd._history[_lcd._last].data[i].quat[1] * _filter_param._exp_smooth.alpha + 
-      _lcd._history[_lcd._prev].data[i].quat[1] * _filter_param._exp_smooth.omalpha;
-    _lcd._history[_lcd._last].data[i].quat[2] = 
-      _lcd._history[_lcd._last].data[i].quat[2] * _filter_param._exp_smooth.alpha + 
-      _lcd._history[_lcd._prev].data[i].quat[2] * _filter_param._exp_smooth.omalpha;
-    _lcd._history[_lcd._last].data[i].quat[3] = 
-      _lcd._history[_lcd._last].data[i].quat[3] * _filter_param._exp_smooth.alpha + 
-      _lcd._history[_lcd._prev].data[i].quat[3] * _filter_param._exp_smooth.omalpha;
+    LAST.quat[0] = LAST.quat[0] * _filter_param._exp_smooth.alpha + 
+      PREV.quat[0] * _filter_param._exp_smooth.omalpha;
+    LAST.quat[1] = LAST.quat[1] * _filter_param._exp_smooth.alpha + 
+      PREV.quat[1] * _filter_param._exp_smooth.omalpha;
+    LAST.quat[2] = LAST.quat[2] * _filter_param._exp_smooth.alpha + 
+      PREV.quat[2] * _filter_param._exp_smooth.omalpha;
+    LAST.quat[3] = LAST.quat[3] * _filter_param._exp_smooth.alpha + 
+      PREV.quat[3] * _filter_param._exp_smooth.omalpha;
 
-    _quat_normalize(_lcd._history[_lcd._last].data[i].quat);
+    _quat_normalize(LAST.quat);
+#undef LAST
+#undef PREV
   }
 }
 
@@ -354,10 +349,12 @@ int lernaEnableFiltering(filter fil) {
   }
   return LERNA_OK;
 }
+
 int lernaDisableFiltering() {
   _lid._filter = NULL;
   return LERNA_OK;
 }
+
 int lernaSetFilterParameter(filter fil, filter_param fparam, float val) {
   switch(fil) {
     case EXP_SMOOTH:
@@ -371,6 +368,7 @@ int lernaSetFilterParameter(filter fil, filter_param fparam, float val) {
   }
   return LERNA_OK;
 }
+
 int lernaGetFilterParameter(filter fil, filter_param fparam, float *val) {
   switch(fil) {
     case EXP_SMOOTH:

@@ -45,6 +45,13 @@ extern "C" {
 #define BUT_JOY 0x40
 #define BUMPER  0x01
 
+#define LERNA_OK 0x0
+#define LERNA_ERROR 0x1
+#define LERNA_HID_ERROR 0x3
+#define LERNA_THREADING_ERROR 0x5
+
+typedef enum {EXP_SMOOTH} filter; //More filters to come
+typedef enum {EXP_SMOOTH_ALPHA} filter_param;
 typedef enum {LEFT=0, RIGHT=1} controller;
 
 typedef struct _controllerdata {
@@ -59,10 +66,6 @@ typedef struct _dual_controllerdata {
   lernaControllerData data[2];
 } lernaDualControllerData;
 
-#define LERNA_OK 0x0
-#define LERNA_ERROR 0x1
-#define LERNA_HID_ERROR 0x3
-#define LERNA_THREADING_ERROR 0x5
 
 int lernaInit(void);
 int lernaExit(void);
@@ -77,12 +80,10 @@ int lernaGetControllerData(controller, lernaControllerData*);
 int lernaGetHistoryDualControllerData(unsigned char, lernaDualControllerData*);
 int lernaGetHistoryControllerData(unsigned char, controller, lernaControllerData*);
 
-/*TODO
-int lernaEnableFiltering();
+int lernaEnableFiltering(filter);
 int lernaDisableFiltering();
-int lernaSetFilterParameter();
-int lernaGetFilterParameter();
-*/
+int lernaSetFilterParameter(filter, filter_param, float);
+int lernaGetFilterParameter(filter, filter_param, float*);
 
 #ifdef __cplusplus
 }

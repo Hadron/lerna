@@ -81,6 +81,7 @@ struct _lerna_internaldata {
   hid_device *_hydra_ctl;
   hid_device *_hydra_dat;
   time_t _time;
+  void (*_filter)();
 } _lid;
 
 struct _lerna_internal_controller_data {
@@ -152,10 +153,8 @@ void _processData(ubyte buf[]) {
     _new->data[i].which = i;
 
     if(_lid._status & LERNA_SPHTRAC) _hemisphere_tracking(i);
-    //TODO filter pos and quat
-    //Normalize quaternion after filtering
-    //_quat_normalize(_new->data[i].quat);
-
+    //filter pos and quat
+    if(_lid._filter) _lid._filter();
   }
 }
 
@@ -305,5 +304,83 @@ int lernaGetHistoryControllerData(unsigned char farback, controller c, lernaCont
     return LERNA_OK;
   }
   else return LERNA_ERROR;
+}
+
+union _filter_param {
+  struct _exp_smooth {
+    float alpha;
+    float omalpha;
+  } _exp_smooth;
+} _filter_param;
+
+void _filter_Exp_Smooth(){
+  int i;
+  for(i=0; i<2; i++){
+    //Position
+    _lcd._history[_lcd._last].data[i].pos[0] = 
+      _lcd._history[_lcd._last].data[i].pos[0] * _filter_param._exp_smooth.alpha + 
+      _lcd._history[_lcd._prev].data[i].pos[0] * _filter_param._exp_smooth.omalpha;
+    _lcd._history[_lcd._last].data[i].pos[1] = 
+      _lcd._history[_lcd._last].data[i].pos[1] * _filter_param._exp_smooth.alpha + 
+      _lcd._history[_lcd._prev].data[i].pos[1] * _filter_param._exp_smooth.omalpha;
+    _lcd._history[_lcd._last].data[i].pos[2] = 
+      _lcd._history[_lcd._last].data[i].pos[2] * _filter_param._exp_smooth.alpha + 
+      _lcd._history[_lcd._prev].data[i].pos[2] * _filter_param._exp_smooth.omalpha;
+    //Quaternion (just lerp, assuming similar orientations from contiguous frames)
+    _lcd._history[_lcd._last].data[i].quat[0] = 
+      _lcd._history[_lcd._last].data[i].quat[0] * _filter_param._exp_smooth.alpha + 
+      _lcd._history[_lcd._prev].data[i].quat[0] * _filter_param._exp_smooth.omalpha;
+    _lcd._history[_lcd._last].data[i].quat[1] = 
+      _lcd._history[_lcd._last].data[i].quat[1] * _filter_param._exp_smooth.alpha + 
+      _lcd._history[_lcd._prev].data[i].quat[1] * _filter_param._exp_smooth.omalpha;
+    _lcd._history[_lcd._last].data[i].quat[2] = 
+      _lcd._history[_lcd._last].data[i].quat[2] * _filter_param._exp_smooth.alpha + 
+      _lcd._history[_lcd._prev].data[i].quat[2] * _filter_param._exp_smooth.omalpha;
+    _lcd._history[_lcd._last].data[i].quat[3] = 
+      _lcd._history[_lcd._last].data[i].quat[3] * _filter_param._exp_smooth.alpha + 
+      _lcd._history[_lcd._prev].data[i].quat[3] * _filter_param._exp_smooth.omalpha;
+
+    _quat_normalize(_lcd._history[_lcd._last].data[i].quat);
+  }
+}
+
+int lernaEnableFiltering(filter fil) {
+  switch(fil) {
+    case EXP_SMOOTH:
+      _lid._filter = &_filter_Exp_Smooth;
+      break;
+    default: 
+      return LERNA_ERROR;
+  }
+  return LERNA_OK;
+}
+int lernaDisableFiltering() {
+  _lid._filter = NULL;
+  return LERNA_OK;
+}
+int lernaSetFilterParameter(filter fil, filter_param fparam, float val) {
+  switch(fil) {
+    case EXP_SMOOTH:
+      if(fparam == EXP_SMOOTH_ALPHA && val >= 0.f && val <= 1.f) {
+        _filter_param._exp_smooth.alpha = val;
+        _filter_param._exp_smooth.omalpha = 1.f - val;
+      } else return LERNA_ERROR;
+      break;
+    default:
+      return LERNA_ERROR;
+  }
+  return LERNA_OK;
+}
+int lernaGetFilterParameter(filter fil, filter_param fparam, float *val) {
+  switch(fil) {
+    case EXP_SMOOTH:
+      if(fparam == EXP_SMOOTH_ALPHA && val != NULL)
+        *val = _filter_param._exp_smooth.alpha;
+      else return LERNA_ERROR;
+      break;
+    default:
+      return LERNA_ERROR;
+  }
+  return LERNA_OK;
 }
 

@@ -113,6 +113,8 @@ int main(int argc, char** argv) {
       glGetError();
 
       init3D();
+      lernaEnableFiltering(EXP_SMOOTH);
+      lernaSetFilterParameter(EXP_SMOOTH, EXP_SMOOTH_ALPHA, 0.8f);
 
       while(run){
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

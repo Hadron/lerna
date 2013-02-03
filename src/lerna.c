@@ -304,38 +304,56 @@ int lernaGetHistoryControllerData(unsigned char farback, controller c, lernaCont
   else return LERNA_ERROR;
 }
 
+// Filters /////////////////////////////////////////////////////////////////////////////////////////
+
 union _filter_param {
   struct _exp_smooth {
     float alpha;
     float omalpha;
   } _exp_smooth;
+  struct _exp_smooth_rng {
+    float near, farnear;
+    float nalpha, falpha;
+  } _exp_smooth_rng;
 } _filter_param;
 
-void _filter_Exp_Smooth(){
-  int i;
-  for(i=0; i<2; i++){
-#define LAST _lcd._history[_lcd._last].data[i]
-#define PREV _lcd._history[_lcd._prev].data[i]
-    //Position
-    LAST.pos[0] = LAST.pos[0] * _filter_param._exp_smooth.alpha + 
-      PREV.pos[0] * _filter_param._exp_smooth.omalpha;
-    LAST.pos[1] = LAST.pos[1] * _filter_param._exp_smooth.alpha + 
-      PREV.pos[1] * _filter_param._exp_smooth.omalpha;
-    LAST.pos[2] = LAST.pos[2] * _filter_param._exp_smooth.alpha + 
-      PREV.pos[2] * _filter_param._exp_smooth.omalpha;
-    //Quaternion (just lerp, assuming similar orientations from contiguous frames)
-    LAST.quat[0] = LAST.quat[0] * _filter_param._exp_smooth.alpha + 
-      PREV.quat[0] * _filter_param._exp_smooth.omalpha;
-    LAST.quat[1] = LAST.quat[1] * _filter_param._exp_smooth.alpha + 
-      PREV.quat[1] * _filter_param._exp_smooth.omalpha;
-    LAST.quat[2] = LAST.quat[2] * _filter_param._exp_smooth.alpha + 
-      PREV.quat[2] * _filter_param._exp_smooth.omalpha;
-    LAST.quat[3] = LAST.quat[3] * _filter_param._exp_smooth.alpha + 
-      PREV.quat[3] * _filter_param._exp_smooth.omalpha;
+void _lerp_filt(int controller, float alpha, float omalpha) {
+#define LAST _lcd._history[_lcd._last].data[controller]
+#define PREV _lcd._history[_lcd._prev].data[controller]
+  //Position
+  LAST.pos[0] = LAST.pos[0] * alpha + PREV.pos[0] * omalpha;
+  LAST.pos[1] = LAST.pos[1] * alpha + PREV.pos[1] * omalpha;
+  LAST.pos[2] = LAST.pos[2] * alpha + PREV.pos[2] * omalpha;
+  //Quaternion (just lerp, assuming similar orientations from contiguous frames)
+  LAST.quat[0] = LAST.quat[0] * alpha + PREV.quat[0] * omalpha;
+  LAST.quat[1] = LAST.quat[1] * alpha + PREV.quat[1] * omalpha;
+  LAST.quat[2] = LAST.quat[2] * alpha + PREV.quat[2] * omalpha;
+  LAST.quat[3] = LAST.quat[3] * alpha + PREV.quat[3] * omalpha;
 
-    _quat_normalize(LAST.quat);
+  _quat_normalize(LAST.quat);
 #undef LAST
 #undef PREV
+}
+
+void _filter_Exp_Smooth() {
+  _lerp_filt(0, _filter_param._exp_smooth.alpha, _filter_param._exp_smooth.omalpha);
+  _lerp_filt(1, _filter_param._exp_smooth.alpha, _filter_param._exp_smooth.omalpha);
+}
+
+void _filter_Exp_Smooth_Rng() {
+  int i;
+  for(i=0; i<2; i++) {
+#define LAST _lcd._history[_lcd._last].data[i]
+#define ESR _filter_param._exp_smooth_rng
+    float t = (LAST.pos[0]*LAST.pos[0] + LAST.pos[1]*LAST.pos[1] + LAST.pos[2]*LAST.pos[2] - ESR.near) / ESR.farnear;
+    float tmp_alpha = ESR.nalpha;
+    if(t > 0.f) 
+      tmp_alpha = t > 1.f ? ESR.falpha : (1.f-t)*ESR.nalpha + t*ESR.nalpha;
+    float tmp_omalpha = 1.f - tmp_alpha;
+
+    _lerp_filt(i, tmp_alpha, tmp_omalpha);
+#undef LAST
+#undef ESR
   }
 }
 
@@ -343,6 +361,9 @@ int lernaEnableFiltering(filter fil) {
   switch(fil) {
     case EXP_SMOOTH:
       _lid._filter = &_filter_Exp_Smooth;
+      break;
+    case EXP_SMOOTH_RANGE:
+      _lid._filter = &_filter_Exp_Smooth_Rng;
       break;
     default: 
       return LERNA_ERROR;
@@ -363,6 +384,24 @@ int lernaSetFilterParameter(filter fil, filter_param fparam, float val) {
         _filter_param._exp_smooth.omalpha = 1.f - val;
       } else return LERNA_ERROR;
       break;
+    case EXP_SMOOTH_RANGE:
+      if(val < 0.f) return LERNA_ERROR;
+      switch(fparam) {
+        case EXP_SMOOTH_RANGE_NEAR:
+          _filter_param._exp_smooth_rng.near = val*val;
+          break;
+        case EXP_SMOOTH_RANGE_FAR:
+            _filter_param._exp_smooth_rng.farnear = val*val - _filter_param._exp_smooth_rng.near;
+          break;
+        case EXP_SMOOTH_RANGE_NALPHA:
+          _filter_param._exp_smooth_rng.nalpha = val;
+          break;
+        case EXP_SMOOTH_RANGE_FALPHA:
+          _filter_param._exp_smooth_rng.falpha = val;
+          break;
+        default:
+          return LERNA_ERROR;
+      } break;
     default:
       return LERNA_ERROR;
   }
@@ -370,12 +409,30 @@ int lernaSetFilterParameter(filter fil, filter_param fparam, float val) {
 }
 
 int lernaGetFilterParameter(filter fil, filter_param fparam, float *val) {
+  if(!val) return LERNA_ERROR;
   switch(fil) {
     case EXP_SMOOTH:
-      if(fparam == EXP_SMOOTH_ALPHA && val != NULL)
+      if(fparam == EXP_SMOOTH_ALPHA)
         *val = _filter_param._exp_smooth.alpha;
       else return LERNA_ERROR;
       break;
+    case EXP_SMOOTH_RANGE:
+      switch(fparam) {
+        case EXP_SMOOTH_RANGE_NEAR:
+          *val = sqrt(_filter_param._exp_smooth_rng.near);
+          break;
+        case EXP_SMOOTH_RANGE_FAR:
+          *val = sqrt(_filter_param._exp_smooth_rng.farnear + _filter_param._exp_smooth_rng.near);
+          break;
+        case EXP_SMOOTH_RANGE_NALPHA:
+          *val = _filter_param._exp_smooth_rng.nalpha;
+          break;
+        case EXP_SMOOTH_RANGE_FALPHA:
+          *val = _filter_param._exp_smooth_rng.falpha;
+          break;
+        default:
+          return LERNA_ERROR;
+      } break;
     default:
       return LERNA_ERROR;
   }

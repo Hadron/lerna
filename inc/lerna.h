@@ -50,8 +50,23 @@ extern "C" {
 #define LERNA_HID_ERROR 0x3
 #define LERNA_THREADING_ERROR 0x5
 
-typedef enum {EXP_SMOOTH} filter; //More filters to come
-typedef enum {EXP_SMOOTH_ALPHA} filter_param;
+/* FILTERS
+ * EXP_SMOOTH
+ *  - simple interpolation
+ *  - Requires ALPHA
+ * EXP_SMOOTH_RANGE
+ *  - simple interpolation between 0-NEAR (with NALPHA) and FAR-infty (with FALPHA)
+ *  - interpolation between NEAR-FAR with NALPHA-FALPHA interpolation
+ *  - Requires NEAR, FAR, NALPHA, FALPHA (NEAR, FAR in this order and NEAR < FAR)
+ */
+typedef enum {EXP_SMOOTH, EXP_SMOOTH_RANGE} filter; //One more filter to come
+typedef enum {
+  EXP_SMOOTH_ALPHA, 
+  EXP_SMOOTH_RANGE_NEAR, 
+  EXP_SMOOTH_RANGE_FAR, 
+  EXP_SMOOTH_RANGE_NALPHA, 
+  EXP_SMOOTH_RANGE_FALPHA
+} filter_param;
 typedef enum {LEFT=0, RIGHT=1} controller;
 
 typedef struct _controllerdata {

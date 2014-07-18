@@ -1,0 +1,19 @@
+Package: libtinycthread0-dbg
+Source: tinycthread
+Version: 1.1-1
+Architecture: amd64
+Maintainer: Klee Dienes <klee@mit.edu>
+Installed-Size: 48
+Depends: libtinycthread0 (= 1.1-1)
+Section: debug
+Priority: extra
+Multi-Arch: same
+Homepage: http://www.x-io.co.uk/open-source-imu-and-ahrs-algorithms
+Description: detached debugging symbols for the Madgwick and Mahony AHRS libraries
+ This package contains detached debugging symbols for the Madgwick and
+ Mahony AHRS libraries.
+ .
+ In 2009 Sebastian Madgwick developed an IMU and AHRS sensor fusion
+ algorithm as part of his Ph.D research at the University of
+ Bristol. This library also includes Madgwick’s implementation of
+ Robert Mayhony’s ‘DCM filter‘ in quaternion form.

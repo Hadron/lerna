@@ -10,5 +10,5 @@ add_library(lerna SHARED ${lerna_SRC})
 
 if(build_test)
   add_executable(lernatest inc/lerna.h test/main.cpp)
-  target_link_libraries(lernatest lerna tinycthread hidapi-libusb GL GLU GLEW glfw)
+  target_link_libraries(lernatest lerna hidapi-libusb GL GLU GLEW glfw tinycthread)
 endif(build_test)

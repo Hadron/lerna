@@ -1,0 +1,5 @@
+tinycthread (1.1-1) unstable; urgency=low
+
+  * Initial packaging. (Closes: #)
+
+ -- Klee Dienes <klee@mit.edu>  Thu, 13 Feb 2014 07:53:01 -0500

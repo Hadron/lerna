@@ -1,0 +1,20 @@
+Package: libtinycthread0
+Source: tinycthread
+Version: 1.1-1
+Architecture: amd64
+Maintainer: Klee Dienes <klee@mit.edu>
+Installed-Size: 66
+Pre-Depends: multiarch-support
+Depends: libc6 (>= 2.17)
+Section: libdevel
+Priority: optional
+Multi-Arch: same
+Homepage: http://www.x-io.co.uk/open-source-imu-and-ahrs-algorithms
+Description: runtime library for the  Madgwick and Mahony AHRS libraries
+ This package contains the runtime library for the Madgwick and Mahony
+ AHRS libraries.
+ .
+ In 2009 Sebastian Madgwick developed an IMU and AHRS sensor fusion
+ algorithm as part of his Ph.D research at the University of
+ Bristol. This library also includes Madgwick’s implementation of
+ Robert Mayhony’s ‘DCM filter‘ in quaternion form.

@@ -28,7 +28,11 @@
 
 #include "lerna.h"
 #include <hidapi/hidapi.h>
+
 #include <tinycthread/tinycthread.h>
+// #include <threads.h>
+// #include <pthread.h>
+
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
@@ -77,7 +81,11 @@ const ubyte CD_offset[2] = {8, 30}; //inital offset for each controller_data in 
 struct _lerna_internaldata {
   ubyte _runTh;
   ubyte _status;
+#if 0
   thrd_t _th;
+#else
+  pthread_t _th;
+#endif
   hid_device *_hydra_ctl;
   hid_device *_hydra_dat;
   time_t _time;
